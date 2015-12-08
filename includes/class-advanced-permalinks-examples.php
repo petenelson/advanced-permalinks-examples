@@ -18,13 +18,18 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 		}
 
+		/**
+		 * Filter for creating custom permalinks
+		 * @param  string $url  original URL
+		 * @param  object $post the WP_Post object
+		 * @return string       updated URL
+		 */
 		function create_permalink( $url, $post ) {
 
-
+			// https://codex.wordpress.org/Plugin_API/Filter_Reference/post_type_link
 
 			return $url;
 		}
-
 
 
 		function rewrite_rules() {
@@ -33,32 +38,55 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 		}
 
+
 		public function query_handler( $query ) {
 
 		}
+
 
 		function register_custom_post_types() {
 
 			$args = array(
 				'public' => true,
 				'labels' => array(
-					'name' => 'Meats',
-					'singular_name' => 'Meat'
+					'name' => 'Shows',
+					'singular_name' => 'Show'
 					),
 				);
 
-			register_post_type( 'meat', $args );
+			register_post_type( 'show', $args );
 
 
 			$args = array(
 				'public' => true,
 				'labels' => array(
-					'name' => 'Vegetables',
-					'singular_name' => 'Vegetable'
+					'name' => 'Seasons',
+					'singular_name' => 'Season'
 					),
 				);
 
-			register_post_type( 'vegetable', $args );
+			register_post_type( 'season', $args );
+
+			$args = array(
+				'public' => true,
+				'labels' => array(
+					'name' => 'Episodes',
+					'singular_name' => 'Episode'
+					),
+				);
+
+			register_post_type( 'episode', $args );
+
+
+			$args = array(
+				'public' => true,
+				'labels' => array(
+					'name' => 'People',
+					'singular_name' => 'Person'
+					),
+				);
+
+			register_post_type( 'person', $args );
 
 		}
 
