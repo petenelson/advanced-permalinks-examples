@@ -119,9 +119,10 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 		function add_rewrite_rules() {
 
-			// show
+			// show, or maybe a genre
 			// ex: /shows/game-of-thrones
-			add_rewrite_rule( '^shows/([^/]+)/?$', 'index.php?show=$matches[1]', 'top' );
+			// ex: /shows/fantasy
+			add_rewrite_rule( '^shows/([^/]+)/?$', 'index.php?show=$matches[1]&_subpage=unknown', 'top' );
 
 			// a show's about page
 			// ex: /shows/game-of-thrones/about
@@ -156,6 +157,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 		function add_custom_query_vars( $vars ) {
 			// you can also use add_rewrite_tag, but this is a bit easier
+			$vars[] = 'genre';
 			$vars[] = '_subpage';
 			return $vars;
 		}
@@ -168,7 +170,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 				return;
 			}
 
-			if ( '1' === filter_input( INPUT_GET, 'query-debug', FILTER_SANITIZE_STRING ) ) {
+			if ( '1' === filter_input( INPUT_GET, 'debug', FILTER_SANITIZE_STRING ) ) {
 				// lets us debug the query before we modify it
 				wp_send_json( $query );
 			}
@@ -177,53 +179,79 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 			$show_slug   = $query->get( 'show' );
 			$subpage     = $query->get( '_subpage' );
 
-			// update the query for show's About page
-			if ( ! empty( $show_slug ) && 'about' === $subpage ) {
+			// update the query for show's subpage
+			if ( ! empty( $show_slug ) && ! empty( $subpage ) ) {
 
-				// find the show page
 				$show_page = $this->get_show_by_slug( $show_slug );
 
+				switch( $subpage ) {
+					case 'about':
+						// find the show page
 
-				if ( ! empty( $show_page ) ) {
+						if ( ! empty( $show_page ) ) {
 
-					// if the show's About page is set, reset the query to that page
-					$about_page_id = get_post_meta( $show_page->ID, '_about_page_id', true );
-					if ( ! empty( $about_page_id  ) ) {
+							// if the show's About page is set, reset the query to that page
+							$about_page_id = get_post_meta( $show_page->ID, '_about_page_id', true );
+							if ( ! empty( $about_page_id  ) ) {
 
-						$query->parse_query(
-							array(
-								'post_type' => 'page',
-								'p' => $about_page_id
+								$query->parse_query(
+									array(
+										'post_type' => 'page',
+										'p' => $about_page_id
+										)
+									);
+
+							}
+
+						}
+						break;
+
+					case 'season':
+						// find the show page
+						$show_page = $this->get_show_by_slug( $show_slug );
+
+						if ( ! empty( $show_page ) ) {
+							// no need to reset the query, just add the show as the post parent
+							$query->set( 'post_parent', $show_page->ID );
+						}
+						break;
+
+					case 'unknown':
+						// this could be either a show, or a genre
+
+						// see if this is a genre term
+						$term = get_term_by( 'slug', $show_slug, 'genre' );
+						if ( ! empty( $term ) ) {
+
+							// reset the query to a taxonomy query
+							$query->parse_query( array(
+								'tax_query' => array(
+									array(
+										'taxonomy' => 'genre',
+										'field' => 'slug',
+										'terms' => $term->slug,
+										),
+									),
 								)
 							);
 
-					}
+						}
+
+						// if it's not a term, the query will default to searching the show custom post type
+
+						break;
 
 				}
+
 
 			}
 
 
-			// update the query for a season attached to a show
-			if ( ! empty( $show_slug ) && 'season' === $subpage ) {
-
-				// find the show page
-				$show_page = $this->get_show_by_slug( $show_slug );
-
-				if ( ! empty( $show_page ) ) {
-
-					// no need to reset the query, just add the show as the post parent
-					$query->set( 'post_parent', $show_page->ID );
-
-				}
-
-			}
-
-
-			if ( '2' === filter_input( INPUT_GET, 'query-debug', FILTER_SANITIZE_STRING ) ) {
+			if ( '2' === filter_input( INPUT_GET, 'debug', FILTER_SANITIZE_STRING ) ) {
 				// lets us debug the query after we modify it
 				wp_send_json( $query );
 			}
+
 		}
 
 
@@ -302,7 +330,6 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 		}
 
 
-
 		function get_show_by_slug( $show_slug ) {
 
 			$query = new WP_Query( array(
@@ -357,6 +384,16 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 			register_post_type( 'show', $args );
 
+			register_taxonomy( 'genre', 'show', array(
+				'name' => 'Genres',
+				'singular_name' => 'Genre',
+				'hierarchical' => true,
+				'rewrite' => array(
+					'slug' => 'shows'
+					),
+				)
+			);
+
 
 			$args = array(
 				'public' => true,
@@ -368,17 +405,6 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 				);
 
 			register_post_type( 'season', $args );
-
-			$args = array(
-				'public' => true,
-				'labels' => array(
-					'name' => 'People',
-					'singular_name' => 'Person'
-					),
-				'rewrite' => false, // we will create custom rewrites for this
-				);
-
-			register_post_type( 'person', $args );
 
 		}
 
