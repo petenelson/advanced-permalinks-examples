@@ -80,7 +80,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 			// creates a URL if this page is assigned as the About page for a show
 			// url: /shows/game-of-thrones/about
-			// rewrite rule: '^shows/([^/]+)/about/?$', 'index.php?show=$matches[1]&_subpage=1'
+			// rewrite rule: '^shows/([^/]+)/about/?$', 'index.php?show=$matches[1]&_subpage=about'
 
 			// run a post meta query to see if this is asigned to a show
 			$show_page = $this->get_show_by_about_page( $page->ID );
@@ -137,13 +137,19 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 			// a season for a show
 			// ex: /shows/game-of-thrones/season-1
 			// ex: /shows/game-of-thrones/season-two
-			add_rewrite_rule( '^shows/([^/]+)/([^/]+)/?$', array(
-				'show'       => '$matches[1]',
-				'season'     => '$matches[2]',
-				'_subpage'   => 'season'
-				),
-				'top'
-			);
+
+			add_rewrite_tag( '%show%', '([^/]+)', 'show=' );
+			add_rewrite_tag( '%season%', '([^/]+)', 'season=' );
+			add_permastruct( 'show/season', '/shows/%show%/%season%' );
+
+			// add_permastruct is another way of doing add_rewrite_rule
+			// add_rewrite_rule( '^shows/([^/]+)/([^/]+)/?$', array(
+			// 	'show'       => '$matches[1]',
+			// 	'season'     => '$matches[2]',
+			// 	),
+			// 	'top'
+			// );
+
 
 
 			// only flush the rewrite rules if the version number has changed
@@ -175,15 +181,29 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 				wp_send_json( $query );
 			}
 
+			$show_slug     = $query->get( 'show' );
+			$season_slug   = $query->get( 'season' );
+			$subpage       = $query->get( '_subpage' );
 
-			$show_slug   = $query->get( 'show' );
-			$subpage     = $query->get( '_subpage' );
 
 			// update the query for show's subpage
-			if ( ! empty( $show_slug ) && ! empty( $subpage ) ) {
+			if ( ! empty( $show_slug ) ) {
 
 				$show_page = $this->get_show_by_slug( $show_slug );
 
+				if ( ! empty( $season_slug ) ) {
+					// if this is a season page
+					// find the show page
+
+					if ( ! empty( $show_page ) ) {
+						// no need to reset the query, just add the show as the post parent
+						$query->set( 'post_parent', $show_page->ID );
+					}
+
+				}
+
+
+				// if it's a subpage
 				switch( $subpage ) {
 					case 'about':
 						// find the show page
@@ -203,16 +223,6 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 							}
 
-						}
-						break;
-
-					case 'season':
-						// find the show page
-						$show_page = $this->get_show_by_slug( $show_slug );
-
-						if ( ! empty( $show_page ) ) {
-							// no need to reset the query, just add the show as the post parent
-							$query->set( 'post_parent', $show_page->ID );
 						}
 						break;
 
@@ -382,7 +392,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 				'rewrite' => false, // we will create custom rewrites for this
 				);
 
-			register_post_type( 'show', $args );
+			register_post_type( 'btv-show', $args );
 
 			register_taxonomy( 'genre', 'show', array(
 				'name' => 'Genres',
@@ -404,7 +414,19 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 				'rewrite' => false, // we will create custom rewrites for this
 				);
 
-			register_post_type( 'season', $args );
+			register_post_type( 'btv-season', $args );
+
+
+			$args = array(
+				'public' => true,
+				'labels' => array(
+					'name' => 'Episodes',
+					'singular_name' => 'Episode'
+					),
+				'rewrite' => false, // we will create custom rewrites for this
+				);
+
+			register_post_type( 'btv-episode', $args );
 
 		}
 
