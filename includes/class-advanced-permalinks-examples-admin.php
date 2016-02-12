@@ -25,7 +25,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples_Post_Meta' ) ) {
 				'show-about',
 				'About Page',
 				array( $this, 'about_page_metabox' ),
-				'show',
+				'btv-show',
 				'side'
 				);
 
@@ -37,7 +37,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples_Post_Meta' ) ) {
 				'post-for-show',
 				'Show',
 				array( $this, 'post_for_show_metabox' ),
-				array( 'post', 'season' ),
+				array( 'post', 'btv-season' ),
 				'side'
 				);
 

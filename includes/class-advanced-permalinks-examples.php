@@ -99,16 +99,19 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 		 */
 		function custom_post_type_permalink( $url, $post ) {
 
-			if ( 'show' === $post->post_type ) {
-				$url = home_url( "/shows/{$post->post_name}" );
-			}
+			switch ( $post->post_type ) {
 
-			if ( 'season' === $post->post_type && ! empty( $post->post_parent ) ) {
+				case 'btv-show':
+					$url = $this->get_show_permalink( $post );
+					break;
 
-				$parent = get_post( $post->post_parent );
-				if ( ! empty( $parent ) && 'show' === $parent->post_type ) {
-					$url = home_url( "/shows/{$parent->post_name}/{$post->post_name}" );
-				}
+				case 'btv-season':
+					$url = $this->get_season_permalink( $post );
+					break;
+
+				case 'btv-episode':
+					$url = $this->get_episode_permalink( $post );
+					break;
 
 			}
 
@@ -116,14 +119,36 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 		}
 
+		/**
+		 * Gets the permalink for a show ( /shows/show-name )
+		 */
+		function get_show_permalink( $post ) {
+			$post = get_post( $post );
+			return user_trailingslashit( "/shows/{$post->post_name}" );
+		}
 
+		/**
+		 * Gets the permalink for a season ( /shows/show-name/season-name )
+		 */
+		function get_season_permalink( $post ) {
+			$show_url = trailingslashit( $this->get_show_permalink( $post->post_parent ) );
+			return user_trailingslashit( "/shows/{$show_url}/{$post->post_name}" );
+		}
+
+		/**
+		 * Gets the permalink for a season ( /shows/show-name/season-name )
+		 */
+		function get_episode_permalink( $post ) {
+			$season_url = trailingslashit( $this->get_season_permalink( $post->post_parent ) );
+			return user_trailingslashit( "/shows/{$season_url}/{$post->post_name}" );
+		}
 
 		function add_rewrite_rules() {
 
 			// show, or maybe a genre
 			// ex: /shows/game-of-thrones
 			// ex: /shows/fantasy
-			add_rewrite_rule( '^shows/([^/]+)/?$', 'index.php?show=$matches[1]&_subpage=unknown', 'top' );
+			add_rewrite_rule( '^shows/([^/]+)/?$', 'index.php?btv-show=$matches[1]&_subpage=unknown', 'top' );
 
 			// a show's about page
 			// ex: /shows/game-of-thrones/about
