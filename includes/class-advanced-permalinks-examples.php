@@ -131,16 +131,18 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 		 * Gets the permalink for a season ( /shows/show-name/season-name )
 		 */
 		function get_season_permalink( $post ) {
-			$show_url = trailingslashit( $this->get_show_permalink( $post->post_parent ) );
-			return user_trailingslashit( "/shows/{$show_url}/{$post->post_name}" );
+			$post = get_post( $post );
+			$show_url = untrailingslashit( $this->get_show_permalink( $post->post_parent ) );
+			return user_trailingslashit( "{$show_url}/{$post->post_name}" );
 		}
 
 		/**
-		 * Gets the permalink for a season ( /shows/show-name/season-name )
+		 * Gets the permalink for an episode ( /shows/show-name/episode-name )
 		 */
 		function get_episode_permalink( $post ) {
-			$season_url = trailingslashit( $this->get_season_permalink( $post->post_parent ) );
-			return user_trailingslashit( "/shows/{$season_url}/{$post->post_name}" );
+			$post = get_post( $post );
+			$season_url = untrailingslashit( $this->get_season_permalink( $post->post_parent ) );
+			return user_trailingslashit( "{$season_url}/{$post->post_name}" );
 		}
 
 		function add_rewrite_rules() {
