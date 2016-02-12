@@ -97,17 +97,17 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 		 * Filter for creating custom permalinks for 'page' post types
 		 * https://codex.wordpress.org/Plugin_API/Filter_Reference/post_type_link
 		 */
-		function custom_post_type_permalink( $url, $custom_post_type ) {
+		function custom_post_type_permalink( $url, $post ) {
 
-			if ( 'show' === $custom_post_type->post_type ) {
-				$url = home_url( "/shows/{$custom_post_type->post_name}" );
+			if ( 'show' === $post->post_type ) {
+				$url = home_url( "/shows/{$post->post_name}" );
 			}
 
-			if ( 'season' === $custom_post_type->post_type && ! empty( $custom_post_type->post_parent ) ) {
+			if ( 'season' === $post->post_type && ! empty( $post->post_parent ) ) {
 
-				$parent = get_post( $custom_post_type->post_parent );
+				$parent = get_post( $post->post_parent );
 				if ( ! empty( $parent ) && 'show' === $parent->post_type ) {
-					$url = home_url( "/shows/{$parent->post_name}/{$custom_post_type->post_name}" );
+					$url = home_url( "/shows/{$parent->post_name}/{$post->post_name}" );
 				}
 
 			}
@@ -115,6 +115,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 			return $url;
 
 		}
+
 
 
 		function add_rewrite_rules() {
