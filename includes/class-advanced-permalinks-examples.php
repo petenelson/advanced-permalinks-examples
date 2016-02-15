@@ -67,7 +67,6 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 			}
 
-
 			return $url;
 		}
 
@@ -145,6 +144,19 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 			return user_trailingslashit( "{$season_url}/{$post->post_name}" );
 		}
 
+		/**
+		 * Gets the permalink for a show's About page ( /shows/show-name/about )
+		 */
+		function get_show_about_permalink( $post ) {
+			$post = get_post( $post );
+			$about_page_id = get_post_meta( $post->ID, '_about_page_id', true );
+			if ( ! empty( $about_page_id ) ) {
+				return user_trailingslashit( trailingslashit( $this->get_show_permalink( $post ) ) . '/about' );
+			} else {
+				return '';
+			}
+		}
+
 		function add_rewrite_rules() {
 
 			// show, or maybe a genre
@@ -156,7 +168,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 			// ex: /shows/game-of-thrones/about
 			// WordPress 4.4 has the ability to take an array of params instead of a querystring
 			add_rewrite_rule( '^shows/([^/]+)/about/?$', array(
-				'show'       => '$matches[1]',
+				'btv-show'   => '$matches[1]',
 				'_subpage'   => 'about'
 				),
 				'top'
@@ -193,6 +205,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 			// you can also use add_rewrite_tag, but this is a bit easier
 			$vars[] = 'genre';
 			$vars[] = '_subpage';
+			$vars[] = '_btv-parent';
 			return $vars;
 		}
 
