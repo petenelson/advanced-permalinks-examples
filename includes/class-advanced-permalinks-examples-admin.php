@@ -13,8 +13,8 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples_Post_Meta' ) ) {
 			$this->add_meta_boxes();
 
 			// custom columns in season
-			add_filter('manage_edit-season_columns',         array( $this, 'add_custom_season_columns' ) );
-			add_action('manage_season_posts_custom_column',  array( $this, 'render_custom_season_column'), 10, 2 );
+			add_filter('manage_edit-btv-season_columns',         array( $this, 'add_custom_season_columns' ) );
+			add_action('manage_btv-season_posts_custom_column',  array( $this, 'render_custom_season_column'), 10, 2 );
 
 		}
 
@@ -30,7 +30,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples_Post_Meta' ) ) {
 				);
 
 			// save the show's About page
-			add_action( 'save_post_show', array( $this, 'save_about_page_metabox' ), 10, 2 );
+			add_action( 'save_post_btv-show', array( $this, 'save_about_page_metabox' ), 10, 2 );
 
 			// add a metabox to allow associating items to a show
 			add_meta_box(
@@ -54,7 +54,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples_Post_Meta' ) ) {
 			$about_page_id = get_post_meta( $post->ID, '_about_page_id', true );
 			$page_query = new WP_Query( array(
 				'post_type'       => 'page',
-				'posts_per_page'  => 500,
+				'posts_per_page'  => 100,
 				'orderby'         => 'name',
 				'order'           => 'ASC',
 				)
@@ -72,9 +72,11 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples_Post_Meta' ) ) {
 
 
 		public function save_about_page_metabox( $post_id, $post ) {
+
 			if ( ! wp_verify_nonce( filter_input( INPUT_POST, 'show-about-page-nonce', FILTER_SANITIZE_STRING ), 'show-about-page' ) ) {
 				return;
 			}
+
 
 			$about_page_id = filter_input( INPUT_POST, '_about_page_id', FILTER_SANITIZE_NUMBER_INT );
 			if ( ! empty( $about_page_id ) ) {
@@ -89,7 +91,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples_Post_Meta' ) ) {
 			wp_nonce_field( 'post-for-show', 'post-for-show-nonce' );
 
 			$show_query = new WP_Query( array(
-				'post_type'       => 'show',
+				'post_type'       => 'btv-show',
 				'posts_per_page'  => 500,
 				'orderby'         => 'name',
 				'order'           => 'ASC',

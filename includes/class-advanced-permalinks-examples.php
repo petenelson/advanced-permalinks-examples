@@ -17,7 +17,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 			$this->register_custom_post_types();
 
 			// custom rewrite rules
-			$this->add_rewrite_rules();
+			$this->add_custom_rewrite_rules();
 
 			// filter for creating permalinks
 			add_filter( 'pre_post_link',         array( $this, 'pre_post_permalink' ), 10, 2 ); // posts
@@ -54,17 +54,16 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 		 */
 		function pre_post_permalink( $url, $post ) {
 
-			// create a new URL this post is associated with a show
 			if ( ! empty( $post->post_parent ) ) {
 
 				$parent = get_post( $post->post_parent );
-				if ( ! empty( $parent ) && 'show' === $parent->post_type ) {
-					// WordPress will automatically add the site URL after this filter is called,
-					// so we only return the path. It will also run the post_link filter after this
-					// which we've hooked into for our custom tags
-					$url = "/shows/{$parent->post_name}/blog/%year%/%monthnamefull%/%postname%";
+				if ( ! empty( $parent ) && 'btv-show' === $parent->post_type ) {
+					// we only need the path and the rewrite tags here, not the full site URL
+					$url = "/shows/{$parent->post_name}/blog/%year%/%monthnum%/%postname%";
 				}
 
+			} else {
+				$url = '/blog/%year%/%monthnamefull%/%postname%';
 			}
 
 			return $url;
@@ -72,23 +71,22 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 
 		/**
-		 * Filter for creating custom permalinks for 'page' post types
+		 * Filter for creating custom permalinks for 'page' post types (note: page_id, not page)
 		 * https://codex.wordpress.org/Plugin_API/Filter_Reference/page_link
 		 */
-		function page_permalink( $url, $page ) {
+		function page_permalink( $url, $page_id ) {
 
 			// creates a URL if this page is assigned as the About page for a show
 			// url: /shows/game-of-thrones/about
-			// rewrite rule: '^shows/([^/]+)/about/?$', 'index.php?show=$matches[1]&_subpage=about'
+			// rewrite rule: '^shows/([^/]+)/about/?$', 'index.php?btv-show=$matches[1]&_subpage=about'
 
 			// run a post meta query to see if this is asigned to a show
-			$show_page = $this->get_show_by_about_page( $page->ID );
+			$show_page = $this->get_show_by_about_page( $page_id );
 			if ( ! empty( $show_page ) ) {
-				$url = home_url( "/shows/{$show_page->post_name}/about" );
+				$url = user_trailingslashit( trailingslashit( $this->get_show_permalink( $show_page ) ) . 'about' );
 			}
 
 			return $url;
-
 		}
 
 
@@ -123,7 +121,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 		 */
 		function get_show_permalink( $post ) {
 			$post = get_post( $post );
-			return user_trailingslashit( "/shows/{$post->post_name}" );
+			return user_trailingslashit( home_url( "/shows/{$post->post_name}" ) );
 		}
 
 		/**
@@ -157,12 +155,18 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 			}
 		}
 
-		function add_rewrite_rules() {
+		function add_custom_rewrite_rules() {
 
 			// show, or maybe a genre
-			// ex: /shows/game-of-thrones
-			// ex: /shows/fantasy
-			add_rewrite_rule( '^shows/([^/]+)/?$', 'index.php?btv-show=$matches[1]&_subpage=unknown', 'top' );
+			// ex: /shows/game-of-thrones/
+			add_rewrite_rule( '^shows/([^/]+)/?$', 'index.php?btv-show=$matches[1]', 'top' );
+
+			$query = new WP_Query( array(
+				'post_type'   => 'btv-show',
+				'name'        => 'game-of-thrones',
+				)
+			);
+
 
 			// a show's about page
 			// ex: /shows/game-of-thrones/about
@@ -219,7 +223,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 			if ( '1' === filter_input( INPUT_GET, 'debug', FILTER_SANITIZE_STRING ) ) {
 				// lets us debug the query before we modify it
-				wp_send_json( $query );
+				// wp_send_json( $query );
 			}
 
 			$show_slug     = $query->get( 'show' );
@@ -300,21 +304,21 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 			if ( '2' === filter_input( INPUT_GET, 'debug', FILTER_SANITIZE_STRING ) ) {
 				// lets us debug the query after we modify it
-				wp_send_json( $query );
+				// wp_send_json( $query );
 			}
 
 		}
 
 
+		/**
+		 * Replaces custom URL tags with values from the post
+		 */
 		function replace_custom_url_tags( $url, $post ) {
 
 			// this is based on the code in core's link-template.php
 
 			// a list of tags we'll search for in the URL
-			$tags = array(
-				'%monthnameshort%',
-				'%monthnamefull%',
-				);
+			$tags = array( '%monthnameshort%', '%monthnamefull%' );
 
 			// add the custom date fields
 			$fields = explode( " ", date( 'M F', strtotime( $post->post_date ) ) );
@@ -384,7 +388,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 		function get_show_by_slug( $show_slug ) {
 
 			$query = new WP_Query( array(
-				'post_type'   => 'show',
+				'post_type'   => 'btv-show',
 				'name'        => $show_slug,
 				)
 			);
@@ -400,7 +404,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 		function get_show_by_about_page( $page_id ) {
 
 			$query = new WP_Query( array(
-				'post_type'    => 'show',
+				'post_type'    => 'btv-show',
 				'meta_key'     => '_about_page_id',
 				'meta_value'   => $page_id,
 				)
@@ -473,7 +477,10 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 
 		function ajax_generate_permalink() {
-			wp_send_json( get_permalink( filter_input( INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT ) ) );
+			$results = array(
+				'url'   => get_permalink( filter_input( INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT ) ),
+			);
+			wp_send_json( $results );
 		}
 
 
