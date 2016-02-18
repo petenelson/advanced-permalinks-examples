@@ -61,9 +61,6 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 					// we only need the path and the rewrite tags here, not the full site URL
 					$url = "/shows/{$parent->post_name}/blog/%year%/%monthnum%/%postname%";
 				}
-
-			} else {
-				$url = '/blog/%year%/%monthnamefull%/%postname%';
 			}
 
 			return $url;
@@ -157,6 +154,9 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 		function add_custom_rewrite_rules() {
 
+			add_rewrite_tag( '%monthnamefull%', '([^/]+)', '_monthnamefull=' );
+			add_rewrite_tag( '%monthnameshort%', '([^/]+)', '_monthnameshort=' );
+
 			// show, or maybe a genre
 			// ex: /shows/game-of-thrones/
 			add_rewrite_rule( '^shows/([^/]+)/?$', 'index.php?btv-show=$matches[1]', 'top' );
@@ -179,20 +179,27 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 			);
 
 			// a season for a show
-			// ex: /shows/game-of-thrones/season-1
+			// ex: /shows/game-of-thrones/season-1/winter-is-coming
+			// ex: /shows/game-of-thrones/season-two/the-north-remembers
+
+			add_rewrite_rule( '^shows/[^/]+/([^/]+)/([^/]+)/?$', array(
+				'_parent-name'      => '$matches[1]',
+				'btv-episode'       => '$matches[2]',
+				),
+				'top'
+			);
+
+
+			// episode for a show
+			// ex: /shows/game-of-thrones/season-1/
 			// ex: /shows/game-of-thrones/season-two
 
-			add_rewrite_tag( '%show%', '([^/]+)', 'show=' );
-			add_rewrite_tag( '%season%', '([^/]+)', 'season=' );
-			add_permastruct( 'show/season', '/shows/%show%/%season%' );
-
-			// add_permastruct is another way of doing add_rewrite_rule
-			// add_rewrite_rule( '^shows/([^/]+)/([^/]+)/?$', array(
-			// 	'show'       => '$matches[1]',
-			// 	'season'     => '$matches[2]',
-			// 	),
-			// 	'top'
-			// );
+			add_rewrite_rule( '^shows/([^/]+)/([^/]+)/?$', array(
+				'_parent-name'      => '$matches[1]',
+				'btv-season'        => '$matches[2]',
+				),
+				'top'
+			);
 
 
 
