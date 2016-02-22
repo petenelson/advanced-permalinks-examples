@@ -1,6 +1,6 @@
 <?php
 
-if ( ! class_exists( 'Advanced_Permalinks_Examples_Post_Meta' ) ) {
+if ( ! class_exists( 'Advanced_Permalinks_Examples_Admin' ) ) {
 
 	class Advanced_Permalinks_Examples_Admin {
 

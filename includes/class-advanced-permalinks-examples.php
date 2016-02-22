@@ -46,7 +46,6 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 		/**
 		 * Filter for creating custom permalinks for 'post' post types
-		 * https://codex.wordpress.org/Plugin_API/Filter_Reference/post_link
 		 *
 		 * @param  string   $url   original URL
 		 * @param  object   $post  the WP_Post object
@@ -55,7 +54,6 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 		function pre_post_permalink( $url, $post ) {
 
 			if ( ! empty( $post->post_parent ) ) {
-
 				$parent = get_post( $post->post_parent );
 				if ( ! empty( $parent ) && 'btv-show' === $parent->post_type ) {
 					// we only need the path and the rewrite tags here, not the full site URL
@@ -75,7 +73,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 			// creates a URL if this page is assigned as the About page for a show
 			// url: /shows/game-of-thrones/about
-			// rewrite rule: '^shows/([^/]+)/about/?$', 'index.php?btv-show=$matches[1]&_subpage=about'
+			// rewrite rule: '^shows/([^/]+)/about/?$', 'index.php?btv-show=$matches[1]&_rule=about'
 
 			// run a post meta query to see if this is asigned to a show
 			$show_page = $this->get_show_by_about_page( $page_id );
@@ -157,6 +155,22 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 			add_rewrite_tag( '%monthnamefull%', '([^/]+)', '_monthnamefull=' );
 			add_rewrite_tag( '%monthnameshort%', '([^/]+)', '_monthnameshort=' );
 
+
+			// show, or maybe a genre
+			// ex: /shows/game-of-thrones/
+			add_rewrite_rule( '^shows/([^/]+)/?$', 'index.php?btv-show=$matches[1]', 'top' );
+
+
+			// show aired by year
+			// ex: /shows/aired/2015/
+			add_rewrite_rule( '^shows/aired/([0-9]{4})/?$', array(
+				'post_type'  => 'btv-show',
+				'year'       => '$matches[1]',
+				),
+				'top'
+			);
+
+
 			// show, or maybe a genre
 			// ex: /shows/game-of-thrones/
 			add_rewrite_rule( '^shows/([^/]+)/?$', array(
@@ -165,6 +179,16 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 				),
 				'top'
 			);
+
+			// a blog post for a show
+			// ex: /shows/game-of-thrones/blog/2015/02/season-6-air-date
+			add_rewrite_rule( '^shows/[^/]+/[0-9]{4}/[0-9]{1,2}/([^/]+)/?$', array(
+				'post_type'  => 'post',
+				'name'       => '$matches[1]',
+				),
+				'top'
+			);
+
 
 
 			// a show's about page
