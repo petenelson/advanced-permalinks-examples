@@ -44,6 +44,19 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples_Post_Meta' ) ) {
 			// save the post's Show parent
 			add_action( 'save_post', array( $this, 'save_post_for_show_metabox' ), 10, 2 );
 
+			// add a metabox to allow associating items to a show
+			add_meta_box(
+				'season-for-episode',
+				'Season',
+				array( $this, 'season_for_episode_metabox' ),
+				array( 'btv-episode' ),
+				'side'
+				);
+
+			// save the post's Show parent
+			add_action( 'save_post', array( $this, 'save_season_for_episode_metabox' ), 10, 2 );
+
+
 		}
 
 
@@ -86,6 +99,55 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples_Post_Meta' ) ) {
 			}
 		}
 
+		public function season_for_episode_metabox( $post ) {
+
+			wp_nonce_field( 'season-for-episode', 'season-for-episode-nonce' );
+
+			$show_query = new WP_Query( array(
+				'post_type'       => 'btv-season',
+				'posts_per_page'  => 500,
+				'orderby'         => 'name',
+				'order'           => 'ASC',
+				)
+			);
+
+			?>
+				<select name="_season_for_episode_id">
+					<option value="">-Select-</option>
+					<?php foreach( $show_query->posts as $season ) : ?>
+						<option value="<?php echo esc_attr( $season->ID ); ?>" <?php selected( $season->ID, $post->post_parent ); ?>><?php echo esc_html( $season->post_title ); ?> - <?php echo esc_html( get_the_title( $season->post_parent) ); ?></option>
+					<?php endforeach; ?>
+				</select>
+			<?php
+		}
+
+
+		/**
+		 * Associates a post with a show
+		 */
+		public function save_season_for_episode_metabox( $post_id, $post ) {
+			if ( ! in_array( $post->post_type, array( 'btv-episode' ) )  || ! wp_verify_nonce( filter_input( INPUT_POST, 'season-for-episode-nonce', FILTER_SANITIZE_STRING ), 'season-for-episode' ) ) {
+				return;
+			}
+
+			$post_parent = filter_input( INPUT_POST, '_season_for_episode_id', FILTER_SANITIZE_NUMBER_INT );
+			if ( ! empty( $post_parent ) ) {
+				$post->post_parent = $post_parent;
+
+
+				// unhook this function temporarily so it isn't called again by the wp_update_post call
+				remove_action( 'save_post', array( $this, 'save_season_for_episode_metabox' ), 10, 2 );
+
+				// save the updated post
+				wp_update_post( $post );
+
+				// reenable hook
+				add_action( 'save_post', array( $this, 'save_season_for_episode_metabox' ), 10, 2 );
+
+			}
+
+		}
+
 		public function post_for_show_metabox( $post ) {
 
 			wp_nonce_field( 'post-for-show', 'post-for-show-nonce' );
@@ -113,7 +175,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples_Post_Meta' ) ) {
 		 * Associates a post with a show
 		 */
 		public function save_post_for_show_metabox( $post_id, $post ) {
-			if ( ! in_array( $post->post_type, array( 'post', 'season' ) )  || ! wp_verify_nonce( filter_input( INPUT_POST, 'post-for-show-nonce', FILTER_SANITIZE_STRING ), 'post-for-show' ) ) {
+			if ( ! in_array( $post->post_type, array( 'post', 'btv-season' ) )  || ! wp_verify_nonce( filter_input( INPUT_POST, 'post-for-show-nonce', FILTER_SANITIZE_STRING ), 'post-for-show' ) ) {
 				return;
 			}
 

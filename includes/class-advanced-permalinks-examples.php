@@ -159,44 +159,51 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 			// show, or maybe a genre
 			// ex: /shows/game-of-thrones/
-			add_rewrite_rule( '^shows/([^/]+)/?$', 'index.php?btv-show=$matches[1]', 'top' );
-
-			$query = new WP_Query( array(
-				'post_type'   => 'btv-show',
-				'name'        => 'game-of-thrones',
-				)
+			add_rewrite_rule( '^shows/([^/]+)/?$', array(
+				'btv-show'   => '$matches[1]',
+				'_rule'      => 'show-or-genre'
+				),
+				'top'
 			);
 
 
 			// a show's about page
 			// ex: /shows/game-of-thrones/about
-			// WordPress 4.4 has the ability to take an array of params instead of a querystring
 			add_rewrite_rule( '^shows/([^/]+)/about/?$', array(
 				'btv-show'   => '$matches[1]',
-				'_subpage'   => 'about'
+				'_rule'      => 'about'
 				),
 				'top'
 			);
 
-			// a season for a show
+			// shows tagged
+			// ex: /shows/tagged/popular_currently-airing
+			add_rewrite_rule( '^shows/tagged/([^/]+)/?$', array(
+				'_tags'   => '$matches[1]',
+				'_rule'   => 'tagged'
+				),
+				'top'
+			);
+
+			// an episode for a show
 			// ex: /shows/game-of-thrones/season-1/winter-is-coming
 			// ex: /shows/game-of-thrones/season-two/the-north-remembers
-
-			add_rewrite_rule( '^shows/[^/]+/([^/]+)/([^/]+)/?$', array(
-				'_parent-name'      => '$matches[1]',
-				'btv-episode'       => '$matches[2]',
+			add_rewrite_rule( '^shows/([^/]+)/([^/]+)/([^/]+)/?$', array(
+				'btv-show'     => '$matches[1]',
+				'btv-season'   => '$matches[2]',
+				'btv-episode'  => '$matches[3]',
+				'_rule'        => 'episode',
 				),
 				'top'
 			);
 
-
-			// episode for a show
+			// season for a show
 			// ex: /shows/game-of-thrones/season-1/
 			// ex: /shows/game-of-thrones/season-two
-
 			add_rewrite_rule( '^shows/([^/]+)/([^/]+)/?$', array(
-				'_parent-name'      => '$matches[1]',
-				'btv-season'        => '$matches[2]',
+				'btv-show'     => '$matches[1]',
+				'btv-season'   => '$matches[2]',
+				'_rule'        => 'season'
 				),
 				'top'
 			);
@@ -212,11 +219,11 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 		}
 
 
+		// https://developer.wordpress.org/reference/hooks/query_vars/
 		function add_custom_query_vars( $vars ) {
 			// you can also use add_rewrite_tag, but this is a bit easier
-			$vars[] = 'genre';
-			$vars[] = '_subpage';
-			$vars[] = '_btv-parent';
+			$vars[] = '_rule';
+			$vars[] = '_tags';
 			return $vars;
 		}
 
@@ -228,91 +235,106 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 				return;
 			}
 
-			if ( '1' === filter_input( INPUT_GET, 'debug', FILTER_SANITIZE_STRING ) ) {
-				// lets us debug the query before we modify it
-				// wp_send_json( $query );
+			$rule          = $query->get( '_rule' );
+
+			$show_slug     = $query->get( 'btv-show' );
+			$season_slug   = $query->get( 'btv-season' );
+			$episode_slug  = $query->get( 'btv-episode' );
+
+			// alter the main query based on the rule
+
+			if ( 'episode' === $rule ) {
+				$show = $this->get_post_by_slug( $show_slug, 'btv-show' );
+
+				if ( ! empty( $show ) ) {
+					$season = $this->get_post_by_slug( $season_slug, 'btv-season', $show->ID );
+
+					if ( ! empty( $season ) ) {
+						$query->set( 'post_parent', $season->ID );
+						return;
+					}
+				}
 			}
 
-			$show_slug     = $query->get( 'show' );
-			$season_slug   = $query->get( 'season' );
-			$subpage       = $query->get( '_subpage' );
+
+			if ( 'season' === $rule ) {
+				$show = $this->get_post_by_slug( $show_slug, 'btv-show' );
+
+				if ( ! empty( $show ) ) {
+					$query->set( 'post_parent', $show->ID );
+					return;
+				}
+			}
 
 
-			// update the query for show's subpage
-			if ( ! empty( $show_slug ) ) {
+			// check if the show slug is a genre
+			// /shows/sci-fi or /shows/game-of-thrones
+			if ( 'show-or-genre' === $rule ) {
 
-				$show_page = $this->get_show_by_slug( $show_slug );
+				$genre_term = get_term_by( 'slug', $show_slug, 'btv-genre' );
 
-				if ( ! empty( $season_slug ) ) {
-					// if this is a season page
-					// find the show page
-
-					if ( ! empty( $show_page ) ) {
-						// no need to reset the query, just add the show as the post parent
-						$query->set( 'post_parent', $show_page->ID );
-					}
-
+				if ( ! empty( $genre_term ) ) {
+					// reset the query to displays shows in the genre
+					$query->parse_query( array(
+						'post_type'   => 'btv-show',
+						'tax_query'   => array(
+							array(
+								'taxonomy'   => 'btv-genre',
+								'terms'      => $genre_term->term_id,
+ 								)
+							)
+						)
+					);
+					return;
 				}
 
+			}
 
-				// if it's a subpage
-				switch( $subpage ) {
-					case 'about':
-						// find the show page
 
-						if ( ! empty( $show_page ) ) {
+			if ( 'about' === $rule ) {
 
-							// if the show's About page is set, reset the query to that page
-							$about_page_id = get_post_meta( $show_page->ID, '_about_page_id', true );
-							if ( ! empty( $about_page_id  ) ) {
+				$show = $this->get_post_by_slug( $show_slug, 'btv-show' );
 
-								$query->parse_query(
-									array(
-										'post_type' => 'page',
-										'p' => $about_page_id
-										)
-									);
+				// if the show's About page is set, reset the query to that page
+				if ( ! empty( $show ) ) {
+					$about_page_id = get_post_meta( $show->ID, '_about_page_id', true );
+					if ( ! empty( $about_page_id  ) ) {
 
-							}
-
-						}
-						break;
-
-					case 'unknown':
-						// this could be either a show, or a genre
-
-						// see if this is a genre term
-						$term = get_term_by( 'slug', $show_slug, 'genre' );
-						if ( ! empty( $term ) ) {
-
-							// reset the query to a taxonomy query
-							$query->parse_query( array(
-								'tax_query' => array(
-									array(
-										'taxonomy' => 'genre',
-										'field' => 'slug',
-										'terms' => $term->slug,
-										),
-									),
+						$query->parse_query(
+							array(
+								'post_type' => 'page',
+								'p' => $about_page_id,
 								)
 							);
+						return;
 
-						}
+					}
+				}
+			}
 
-						// if it's not a term, the query will default to searching the show custom post type
 
-						break;
+			if ( 'tagged' === $rule ) {
+				$tags = explode( '_', $query->get( '_tags' ) );
+				$args = array(
+					'post_type'   => 'btv-show',
+					'tax_query'   => array( 'OR' ),
+					);
 
+				// build multiple tags into the OR query
+				foreach( $tags as $tag ) {
+					$args['tax_query'][] = array(
+						'taxonomy'   => 'btv-tag',
+						'field'      => 'slug',
+						'terms'      => $tag,
+						);
 				}
 
+				$query->parse_query( $args );
 
+				return;
 			}
 
 
-			if ( '2' === filter_input( INPUT_GET, 'debug', FILTER_SANITIZE_STRING ) ) {
-				// lets us debug the query after we modify it
-				// wp_send_json( $query );
-			}
 
 		}
 
@@ -339,6 +361,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 		}
 
 
+
 		/**
 		 * Allows duplicate post slugs for the season custom post type between different post parents
 		 *
@@ -353,7 +376,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 			global $wpdb;
 
-			if ( 'season' !== $post_type || 'publish' !== $post_status ) {
+			if ( 'btv-season' !== $post_type || 'publish' !== $post_status ) {
 				return $slug;
 			}
 
@@ -392,13 +415,18 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 		}
 
 
-		function get_show_by_slug( $show_slug ) {
+		function get_post_by_slug( $slug, $post_type, $post_parent_id = null ) {
 
-			$query = new WP_Query( array(
-				'post_type'   => 'btv-show',
-				'name'        => $show_slug,
-				)
-			);
+			$args = array(
+				'post_type'   => $post_type,
+				'name'        => $slug,
+				);
+
+			if ( ! empty( $post_parent_id ) ) {
+				$args['post_parent'] = $post_parent_id;
+			}
+
+			$query = new WP_Query( $args );
 
 			if ( $query->have_posts() ) {
 				return $query->posts[0];
@@ -438,24 +466,34 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 					'name' => 'Shows',
 					'singular_name' => 'Show'
 					),
-				'rewrite' => array(
-					'slug' => 'shows'
-					),
 				'rewrite' => false, // we will create custom rewrites for this
 				);
 
 			register_post_type( 'btv-show', $args );
 
-			register_taxonomy( 'genre', 'show', array(
-				'name' => 'Genres',
-				'singular_name' => 'Genre',
-				'hierarchical' => true,
-				'rewrite' => array(
-					'slug' => 'shows'
+			register_taxonomy( 'btv-genre', 'btv-show', array(
+				'labels' => array(
+					'name' => 'Genres',
+					'singular_name' => 'Genre',
+					'add_new_item' => 'Add New Genre',
+					'new_item_name' => 'New Genre Name',
 					),
+				'hierarchical' => true,
+				'rewrite' => false,
 				)
 			);
 
+			register_taxonomy( 'btv-tag', 'btv-show', array(
+				'labels' => array(
+					'name' => 'Tags',
+					'singular_name' => 'Tag',
+					'add_new_item' => 'Add New Tag',
+					'new_item_name' => 'New Tag Name',
+					),
+				'hierarchical' => false,
+				'rewrite' => false,
+				)
+			);
 
 			$args = array(
 				'public' => true,
