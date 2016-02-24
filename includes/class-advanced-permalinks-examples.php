@@ -182,7 +182,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 			// a blog post for a show
 			// ex: /shows/game-of-thrones/blog/2015/02/season-6-air-date
-			add_rewrite_rule( '^shows/[^/]+/[0-9]{4}/[0-9]{1,2}/([^/]+)/?$', array(
+			add_rewrite_rule( '^shows/[^/]+/blog/[0-9]{4}/[0-9]{1,2}/([^/]+)/?$', array(
 				'post_type'  => 'post',
 				'name'       => '$matches[1]',
 				),
