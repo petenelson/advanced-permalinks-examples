@@ -4,7 +4,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 	class Advanced_Permalinks_Examples {
 
-		const VERSION = '1.0.0';
+		const VERSION = '1.2.0';
 
 		/**
 		 * Initialize our example code
@@ -152,14 +152,11 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 		function add_custom_rewrite_rules() {
 
-			add_rewrite_tag( '%monthnamefull%', '([^/]+)', '_monthnamefull=' );
-			add_rewrite_tag( '%monthnameshort%', '([^/]+)', '_monthnameshort=' );
+			// may (3) to september (9)
+			add_rewrite_tag( '%monthnamefull%',  '([a-z]{3,9})', '_monthnamefull=' );
 
-
-			// show, or maybe a genre
-			// ex: /shows/game-of-thrones/
-			add_rewrite_rule( '^shows/([^/]+)/?$', 'index.php?btv-show=$matches[1]', 'top' );
-
+			// always three characters
+			add_rewrite_tag( '%monthnameshort%', '([a-z]{3})',   '_monthnameshort=' );
 
 			// show aired by year
 			// ex: /shows/aired/2015/
@@ -170,10 +167,9 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 				'top'
 			);
 
-
 			// show, or maybe a genre
 			// ex: /shows/game-of-thrones/
-			add_rewrite_rule( '^shows/([^/]+)/?$', array(
+			add_rewrite_rule( '^shows/([0-9a-z-_]{1,})/?$', array(
 				'btv-show'   => '$matches[1]',
 				'_rule'      => 'show-or-genre'
 				),
@@ -182,18 +178,16 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 			// a blog post for a show
 			// ex: /shows/game-of-thrones/blog/2015/02/season-6-air-date
-			add_rewrite_rule( '^shows/[^/]+/blog/[0-9]{4}/[0-9]{1,2}/([^/]+)/?$', array(
+			add_rewrite_rule( '^shows/[0-9a-z-_]{1,}/blog/[0-9]{4}/[0-9]{1,2}/([0-9a-z-_]{1,})/?$', array(
 				'post_type'  => 'post',
 				'name'       => '$matches[1]',
 				),
 				'top'
 			);
 
-
-
 			// a show's about page
 			// ex: /shows/game-of-thrones/about
-			add_rewrite_rule( '^shows/([^/]+)/about/?$', array(
+			add_rewrite_rule( '^shows/[0-9a-z-_]{1,}/about/?$', array(
 				'btv-show'   => '$matches[1]',
 				'_rule'      => 'about'
 				),
@@ -202,7 +196,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 			// shows tagged
 			// ex: /shows/tagged/popular_currently-airing
-			add_rewrite_rule( '^shows/tagged/([^/]+)/?$', array(
+			add_rewrite_rule( '^shows/tagged/([0-9a-z-_]{1,})/?$', array(
 				'_tags'   => '$matches[1]',
 				'_rule'   => 'tagged'
 				),
@@ -212,7 +206,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 			// an episode for a show
 			// ex: /shows/game-of-thrones/season-1/winter-is-coming
 			// ex: /shows/game-of-thrones/season-two/the-north-remembers
-			add_rewrite_rule( '^shows/([^/]+)/([^/]+)/([^/]+)/?$', array(
+			add_rewrite_rule( '^shows/([0-9a-z-_]{1,})/([0-9a-z-_]{1,})/([0-9a-z-_]{1,})/?$', array(
 				'btv-show'     => '$matches[1]',
 				'btv-season'   => '$matches[2]',
 				'btv-episode'  => '$matches[3]',
@@ -221,17 +215,17 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 				'top'
 			);
 
+
 			// season for a show
 			// ex: /shows/game-of-thrones/season-1/
 			// ex: /shows/game-of-thrones/season-two
-			add_rewrite_rule( '^shows/([^/]+)/([^/]+)/?$', array(
+			add_rewrite_rule( '^shows/([0-9a-z-_]{1,})/([0-9a-z-_]{1,})/?$', array(
 				'btv-show'     => '$matches[1]',
 				'btv-season'   => '$matches[2]',
 				'_rule'        => 'season'
 				),
 				'top'
 			);
-
 
 
 			// only flush the rewrite rules if the version number has changed
@@ -244,7 +238,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 
 		// https://developer.wordpress.org/reference/hooks/query_vars/
-		function add_custom_query_vars( $vars ) {
+		public function add_custom_query_vars( $vars ) {
 			// you can also use add_rewrite_tag, but this is a bit easier
 			$vars[] = '_rule';
 			$vars[] = '_tags';
@@ -252,6 +246,12 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 		}
 
 
+		/**
+		 * Alters the main query based on query vars
+		 *
+		 * @param  object $query the WP_Query
+		 * @return void
+		 */
 		public function query_handler( $query ) {
 
 			// important, don't make any changes unless this is the main, frontend query
@@ -400,7 +400,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 			global $wpdb;
 
-			if ( 'btv-season' !== $post_type || 'publish' !== $post_status ) {
+			if ( 'btv-season' !== $post_type || 'btv-episode' !== $post_type || 'publish' !== $post_status ) {
 				return $slug;
 			}
 
@@ -439,7 +439,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 		}
 
 
-		function get_post_by_slug( $slug, $post_type, $post_parent_id = null ) {
+		public function get_post_by_slug( $slug, $post_type, $post_parent_id = null ) {
 
 			$args = array(
 				'post_type'   => $post_type,
@@ -460,7 +460,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 		}
 
 
-		function get_show_by_about_page( $page_id ) {
+		public function get_show_by_about_page( $page_id ) {
 
 			$query = new WP_Query( array(
 				'post_type'    => 'btv-show',
@@ -482,7 +482,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 		 *
 		 * @return void
 		 */
-		function register_custom_post_types() {
+		public function register_custom_post_types() {
 
 			$args = array(
 				'public' => true,
