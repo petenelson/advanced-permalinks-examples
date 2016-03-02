@@ -4,7 +4,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 	class Advanced_Permalinks_Examples {
 
-		const VERSION = '1.2.0';
+		const VERSION = '1.3.0';
 
 		/**
 		 * Initialize our example code
@@ -187,7 +187,7 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 			// a show's about page
 			// ex: /shows/game-of-thrones/about
-			add_rewrite_rule( '^shows/[0-9a-z-_]{1,}/about/?$', array(
+			add_rewrite_rule( '^shows/([0-9a-z-_]{1,})/about/?$', array(
 				'btv-show'   => '$matches[1]',
 				'_rule'      => 'about'
 				),
