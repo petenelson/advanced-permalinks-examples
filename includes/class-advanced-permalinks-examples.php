@@ -116,7 +116,9 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 		 */
 		function get_show_permalink( $post ) {
 			$post = get_post( $post );
-			return user_trailingslashit( home_url( "/shows/{$post->post_name}" ) );
+			if ( ! empty( $post ) ) {
+				return user_trailingslashit( home_url( "/shows/{$post->post_name}" ) );
+			}
 		}
 
 		/**
@@ -400,11 +402,15 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 
 			global $wpdb;
 
-			if ( 'btv-season' !== $post_type || 'btv-episode' !== $post_type || 'publish' !== $post_status ) {
+			if ( 'publish' !== $post_status ) {
 				return $slug;
 			}
 
-			$check_sql       = "
+			if ( ! in_array( $post_type, array( 'btv-season', 'btv-episode' ) ) ) {
+				return $slug;
+			}
+
+			$check_sql = "
 				SELECT post_name
 				FROM $wpdb->posts
 				WHERE post_name = %s
