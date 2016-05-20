@@ -126,8 +126,10 @@ if ( ! class_exists( 'Advanced_Permalinks_Examples' ) ) {
 		 */
 		function get_season_permalink( $post ) {
 			$post = get_post( $post );
-			$show_url = untrailingslashit( $this->get_show_permalink( $post->post_parent ) );
-			return user_trailingslashit( "{$show_url}/{$post->post_name}" );
+			if ( ! empty( $post ) ) {
+				$show_url = untrailingslashit( $this->get_show_permalink( $post->post_parent ) );
+				return user_trailingslashit( "{$show_url}/{$post->post_name}" );
+			}
 		}
 
 		/**
